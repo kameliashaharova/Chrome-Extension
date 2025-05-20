@@ -1,45 +1,40 @@
-let myLeads = []
-let oldLeads = []
-// 1. Turn the myLeads string into an array
-// myLeads = JSON.parse(myLeads)
-// // 2. Push a new value to the array
-// myLeads.push("www.lead2.com")
-// // 3. Turn the array into a string again
-// myLeads = JSON.stringify(myLeads)
-// // 4. Console.log the string using typeof to verify that it's a string
-// console.log(typeof myLeads)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
+import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-database.js";
+
+
+const firebaseConfig = {
+    databaseURL: "https://leads-tracker-app-100ca-default-rtdb.firebaseio.com/"
+}
+
+const app = initializeApp(firebaseConfig)
+const database = getDatabase(app)
+const referenceInDB = ref(database, "leads")
 
 const inputBtn = document.getElementById("input-btn")
 const inputEl = document.getElementById("input-el")
 const ulEl = document.getElementById("ul-el")
 const deleteBtn = document.getElementById("delete-btn")
-const tabBtn = document.getElementById("tab-btn")
-const leadsFromLocalStorage = JSON.parse( localStorage.getItem("myLeads" ))
-
-// 1. Check if leadsFromLocalStorage is truthy
-// 2. If so, set myLeads to its value and call renderLeads()
-if (leadsFromLocalStorage) {
-    myLeads = leadsFromLocalStorage
-    render(myLeads)
-}
-
-tabBtn.addEventListener("click", function () {
-    // chrome and tabs are objects available when running in chrome
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        //save url instead of logging it out (console.log)
-        myLeads.push(tabs[0].url)
-        localStorage.setItem( "myLeads", JSON.stringify(myLeads) )
-        render(myLeads)
-    })
-})
 
 inputBtn.addEventListener("click", function() {
-    myLeads.push(inputEl.value)
+    push(referenceInDB, inputEl.value)
     inputEl.value = ""
-    // turn array into string, and save myleads to localStorage
-    localStorage.setItem("myLeads", JSON.stringify(myLeads))
-    render(myLeads)
 })
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+    push(referenceInDB, inputEl.value)
+    inputEl.value = ""
+    }
+})
+
+onValue(referenceInDB, function(snapshot){
+    const snapshotExists = snapshot.exists()
+    if (snapshotExists) {
+        const snapshotValues = snapshot.val()
+        const leads = Object.values(snapshotValues)
+        render(leads)
+    }
+}) 
 
 function render(leads) {
     let listItems = ""
@@ -51,17 +46,7 @@ function render(leads) {
     ulEl.innerHTML = listItems 
 }
 
-// 2. Listen for double clicks on the delete button (google it!)
-// 3. When clicked, clear localStorage, myLeads, and the DOM
 deleteBtn.addEventListener("dblclick", function() {
-    localStorage.clear()
-    myLeads = []
-    render(myLeads)
-}
-)
-
-// function renderLeads() {
-//         let listItem = "<li>" + inputEl.value + "</li>"
-//         ulEl.innerHTML += listItem
-
-//     }
+    remove(referenceInDB)
+    ulEl.innerHTML = ""
+})
